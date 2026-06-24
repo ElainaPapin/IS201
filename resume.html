@@ -110,6 +110,31 @@
       color: #667eea;
     }
 
+    .top-nav {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .nav-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      text-decoration: none;
+      border-radius: 999px;
+      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .nav-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(102, 126, 234, 0.35);
+    }
+
     .profile-image {
       width: 150px;
       height: 150px;
@@ -411,6 +436,13 @@
 </head>
 <body>
   <div class="container">
+    <nav class="top-nav">
+      <a href="game.html" class="nav-button">
+        <i class="fas fa-gamepad"></i>
+        Play the Game
+      </a>
+    </nav>
+
     <!-- Header -->
     <header>
       <h1 class="name">Elaina Papin - Test</h1>
