@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Focus Mixer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            transition: background 0.5s ease;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 { margin-top: 0; color: var(--accent); }
+
+        .timer-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin: 1.5rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .mixer {
+            margin-top: 2.5rem;
+            text-align: left;
+        }
+
+        .sound-control {
+            margin-bottom: 1.2rem;
+        }
+
+        .sound-control label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .sound-control input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Zen Focus Space</h1>
+    <p>Mix your background noise & crush your goals.</p>
+
+    <div class="timer-display" id="timer">25:00</div>
+    <button class="btn" id="startBtn">Start Focus Session</button>
+
+    <div class="mixer">
+        <h3>Soundscape Mixer</h3>
+        
+        <div class="sound-control">
+            <label for="brownNoise">Brownian Static (Deep Focus)</label>
+            <input type="range" id="brownNoise" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <div class="sound-control">
+            <label for="spaceDrone">Cosmic Hum (Relaxation)</label>
+            <input type="range" id="spaceDrone" min="0" max="1" step="0.01" value="0">
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- TIMER LOGIC ---
+    let timeLeft = 25 * 60;
+    let timerId = null;
+    const timerDisplay = document.getElementById('timer');
+    const startBtn = document.getElementById('startBtn');
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const seconds = (timeLeft % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    startBtn.addEventListener('click', () => {
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+            startBtn.textContent = 'Resume Focus';
+        } else {
+            startBtn.textContent = 'Pause';
+            timerId = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerId);
+                    alert("Focus session complete! Take a break.");
+                }
+            }, 1000);
+        }
+    });
+
+    // --- AUDIO SYNTHESIS LOGIC (Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function createNoiseNode(type) {
+        const bufferSize = 2 * audioCtx.sampleRate;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            if (type === 'brown') {
+                // Brownian noise filter formula
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5; // Compensate for loss of volume
+            } else {
+                output[i] = white;
+            }
+        }
+        
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        noise.loop = true;
+        return noise;
+    }
+
+    // Set up Brown Noise
+    const brownNode = createNoiseNode('brown');
+    const brownGain = audioCtx.createGain();
+    brownGain.gain.value = 0;
+    brownNode.connect(brownGain).connect(audioCtx.destination);
+    let brownStarted = false;
+
+    document.getElementById('brownNoise').addEventListener('input', (e) => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!brownStarted) { brownNode.start(); brownStarted = true; }
+        brownGain.gain.value = e.target.value;
+    });
+
+    // Set up Oscillator Drone
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 85; // Low soothing frequency
+    oscGain.gain.value = 0;
+    osc.connect(oscGain).connect(audioCtx.destination);
+    let oscStarted = false;
+
+    document.getElementById('spaceDrone').addEventListener('input', (e) => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!oscStarted) { osc.start(); oscStarted = true; }
+        oscGain.gain.value = e.target.value * 0.5; // Keep it subtle
+    });
+</script>
+
+</body>
+</html>
